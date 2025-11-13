@@ -85,21 +85,24 @@ io.on("connection", (socket) => {
   function leaveRoom() {
     const { rooms } = socket;
 
-    Array.from(rooms).forEach((roomId) => {
-      const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
+    Array.from(rooms)
+      // LEAVE ONLY CLIENT CREATED ROOM
+      .filter((roomId) => validate(roomId) && version(roomId) === 4)
+      .forEach((roomId) => {
+        const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
 
-      clients.forEach((clientId) => {
-        io.to(clientId).emit(ACTIONS.REMOVE_PEER, {
-          peerId: socket.id,
+        clients.forEach((clientId) => {
+          io.to(clientId).emit(ACTIONS.REMOVE_PEER, {
+            peerId: socket.id,
+          });
+
+          socket.emit(ACTIONS.REMOVE_PEER, {
+            peerId: clientId,
+          });
         });
 
-        socket.emit(ACTIONS.REMOVE_PEER, {
-          peerId: clientId,
-        });
+        socket.leave(roomId);
       });
-
-      socket.leave(roomId);
-    });
 
     shareRoomsInfo();
   }
@@ -125,4 +128,3 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
   console.log(`listening on *:${PORT}`);
 });
- 
